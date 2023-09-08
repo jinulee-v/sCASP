@@ -35,6 +35,7 @@
 :- use_module(library(assoc)).
 :- use_module(library(apply)).
 :- use_module(library(lists)).
+:- use_module(common).
 
 /** <module> Variable storage and access
 
@@ -63,13 +64,26 @@ is_var($X, X) :-
 %
 %   Get the body variables (variables used in   the  body but not in the
 %   head) for a clause.
+%   EDIT: To achieve `Negation as Failure` behavior, several modification has been made.
+%   1. Split body_vars/3 into two cases, where head is a normal literal or negated.
+%   2. Implement multiple version of term_vars, to exclude negated/positive body
+%      literals. Since current implementation do not discriminate between list and
+%      functions, we should also split these cases.
 
 :- det(body_vars/3).
 
 body_vars(H, B, Bv) :-
-    empty_assoc(Empty),
-    term_vars(H, _, [], Empty, Hv),
-    term_vars(B, Bv, [], Hv, _).
+    predicate(H, Name, _),
+    % If Dual head is negative, original was positive
+    (atom_concat('n', _, Name) % if original head positive,
+    ->  empty_assoc(Empty),
+        term_vars(H, _, [], Empty, Hv),
+        term_body_only_positive(B, Bv, [], Hv, _) % Collect variables from positive literal
+    ;   fail
+    % ;   empty_assoc(Empty),
+    %     term_vars(H, _, [], Empty, Hv),
+    %     term_body_only_negative(B, Bv, [], Hv, _) % Collect variables from negative literal
+    ).
 
 term_vars(Var, Vars0, Vars, Seen0, Seen) :-
     is_var(Var, Name),
@@ -80,13 +94,37 @@ term_vars(Var, Vars0, Vars, Seen0, Seen) :-
     ;   put_assoc(Name, Seen0, true, Seen),
         Vars0 = [Var|Vars]
     ).
+% now only applied for functions, not Body(a list).
 term_vars(Term, Vars0, Vars, Seen0, Seen) :-
     compound(Term),
     !,
     functor(Term, _Name, Arity),
     term_vars(1, Arity, Term, Vars0, Vars, Seen0, Seen).
 term_vars(_, Vars, Vars, Seen, Seen).
-
+% term_vars modified for Body list
+:- det(term_body_only_positive/5).
+:- det(term_body_only_negative/5).
+term_body_only_positive([Term|Body], Vars0, Vars, Seen0, Seen) :-
+    !,
+    % format('Check ~p~n', Term),
+    functor(Term, _Name, _Arity),
+    (Term \= not(_)
+    ->  term_vars(Term, Vars0, Vars1, Seen0, Seen1),
+        term_body_only_positive(Body, Vars1, Vars, Seen1, Seen)
+    ;   true
+    ).
+term_body_only_positive([],_,[],_,[]).
+term_body_only_negative([Term|Body], Vars0, Vars, Seen0, Seen) :-
+    !,
+    % format('Check ~p~n', Term),
+    functor(Term, _Name, _Arity),
+    (Term = not(_)
+    ->  term_vars(Term, Vars0, Vars1, Seen0, Seen1),
+        term_body_only_positive(Body, Vars1, Vars, Seen1, Seen)
+    ;   true
+    ).
+term_body_only_negative([],_,[],_,[]).
+% Function arguments recursion
 term_vars(I, Arity, Term, Vars0, Vars, Seen0, Seen) :-
     I =< Arity,
     !,
