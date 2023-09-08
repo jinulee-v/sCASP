@@ -1,3 +1,9 @@
+# Differences from Original repository (SWI-Prolog s(CASP))
+
+This fork of SWI-PL s(CASP) contains following changes:
+- Implements Negation as Failure, details described [here](https://github.com/SWI-Prolog/sCASP/issues/7)
+- Properly prints classically negated literals in the proof tree (i.e. `-value`).
+
 # SWI-Prolog port (swipl branch)
 
 > This is a fork from https://gitlab.software.imdea.org/ciao-lang/sCASP.
