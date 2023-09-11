@@ -162,9 +162,9 @@ comp_dual2(Hn, Bg, Bv) :-
     atomic_list_concat([Base0, '_vh', Arity], Base),
     join_functor(F2, Base, Arity),
     Hn2 =.. [F2|A2], % add body variables to innermost head.
-    define_forall(Hn2, G, Bv), % get the call to the innermost dual
+    % define_forall(Hn2, G, Bv), % get the call to the innermost dual
     comp_dual3(Hn2, Bg, []), % create innermost duals
-    c_rule(Rd, Hn, [G]), % create dual
+    c_rule(Rd, Hn, [Hn2]), % create dual
     assert_rule(dual(Rd)).
 
 %!  comp_dual3(+DualHead:compound, +Body:list, +UsedGoals:list) is det

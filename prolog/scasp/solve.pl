@@ -398,6 +398,19 @@ solve_goal_table_predicate(Goal, M, Parents, ProvedIn, ProvedOut, AttStackIn, At
 
 solve_goal_predicate(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut,
                      GoalModel) :-
+    Goal = not(InnerGoal),
+    verbose(format('innergoal: ~p ~n', [InnerGoal])),
+    (solve_goal_predicate_(InnerGoal, M, Parents, ProvedIn, _, StackIn, _, _)
+    ->  fail % If its positive dual suceeds, fail the proof.
+    ;   solve_goal_predicate_(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut, GoalModel) % Proceed on dual statements
+    ).
+solve_goal_predicate(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut,
+                     GoalModel) :- % Positive goals directly execute original solve_goal_predicate
+    Goal \= not(_),
+    solve_goal_predicate_(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut, GoalModel).
+
+solve_goal_predicate_(Goal, M, Parents, ProvedIn, ProvedOut, StackIn, StackOut,
+                     GoalModel) :- % Original solve_goal_predicate
     M:pr_rule(Goal, Body, Origin),
     mkgoal(Goal, Origin, StackGoal),
     solve(Body, M, Parents, ProvedIn, ProvedMid, [StackGoal|StackIn], StackOut, BodyModel),
